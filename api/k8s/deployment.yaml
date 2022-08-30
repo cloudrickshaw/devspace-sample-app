@@ -14,4 +14,16 @@ spec:
     spec:
       containers:
       - name: api
-        image: localhost:5005/app/api
+        image: localhost:5005/devspace-demo/api
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+  selector:
+    role: api

@@ -1,7 +1,8 @@
 version: v2beta1
-name: api
+name: frontend
 
 vars:
+  APP_NAME: "${DEVSPACE_NAME}"
   IMAGE_TAG: latest
 
 # This is a list of `pipelines` that DevSpace can execute (you can define your own)
@@ -23,80 +24,75 @@ pipelines:
 # We recommend to skip image building during development (devspace dev) as much as possible
 images:
   app:
-    image: localhost:5005/devspace-demo/api
-    dockerfile: ./Dockerfile.development
+    image:  localhost:5005/devspace-demo/frontend
+    dockerfile: ./Dockerfile
     tags:
       - ${IMAGE_TAG}
-    buildKit:
-    #buildArgs:
-      #GO_VERSION: 1.19
 
 # This is a list of `deployments` that DevSpace can create for this project
 deployments:
   app:
-   kubectl:
-     manifests:
-       - ./k8s/*
+    # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
+    helm:
+      # We are deploying this project with the Helm chart you provided
+      chart:
+        name: ./k8s/chart 
+      values:
+        image:
+          tag: last
+      #   key: value
 
 # This is a list of `dev` containers that are based on the containers created by your deployments
 dev:
   app:
-    # Search for the container that runs this image
+
     labelSelector:
-      role: api
-    #imageSelector: localhost:5005/devspace-demo/api
+      app.kubernetes.io/name: ${APP_NAME}
 
+    # Search for the container that runs this image
+    #imageSelector: my-image-registry.tld/username/app
     # Replace the container image with this dev-optimized image (allows to skip image building during development)
-    devImage: ${runtime.images.app}
-
+    devImage:  ${runtime.images.app.image}
     command:
-      - ./bin/air
-
+      - node
+      - index.js
     # Sync files between the local filesystem and the development container
     sync:
       - path: ./
-
+        excludePaths:
+          - node_modules
     # Open a terminal and use the following command to start it
-    # terminal:
-    #   command: ./devspace_start.sh
-
+    terminal: {}
+    #  command: ./devspace_start.sh
     # Inject a lightweight SSH server into the container (so your IDE can connect to the remote dev env)
     # ssh:
     #   enabled: true
-
     # Make the following commands from my local machine available inside the dev container
     proxyCommands:
       - command: devspace
       - command: kubectl
       - command: helm
       - command: git
-
     # Forward the following ports to be able access your application via localhost
     ports:
-      - port: "8080"
-
+      - port: "3000"
     # Open the following URLs once they return an HTTP status code other than 502 or 503
-    # open:
-    #   - url: http://localhost:8080
+    open:
+      - url: http://localhost:3000/ping
 
-
-# Use the `commands` section to define repeatable dev workflows for this project
-commands:
-  # migrate-db:
-  #   command: |-
-  #     echo 'This is a cross-platform, shared command that can be used to codify any kind of dev task.'
-  #     echo 'Anyone using this project can invoke it via "devspace run migrate-db"'
-
-pullSecrets:
-  # localhost-5005:
-  #   registry: localhost:5005
-  #   username: ${REGISTRY_USERNAME}
-  #   password: ${REGISTRY_PASSWORD}
+# Use the `commands` section to define repeatable dev workflows for this project 
+# commands:
+#   migrate-db:
+#     command: |-
+#       echo 'This is a cross-platform, shared command that can be used to codify any kind of dev task.'
+#       echo 'Anyone using this project can invoke it via "devspace run migrate-db"'
 
 # Define dependencies to other projects with a devspace.yaml
-# dependencies:
-#   api:
-#     git: https://...  # Git-based dependencies
-#     tag: v1.0.0
+dependencies:
+  api:
+    path: ../api
+# blah:
+#   git: https://...  # Git-based dependencies
+#   tag: v1.0.0
 #   ui:
 #     path: ./ui        # Path-based dependencies (for monorepos)
